@@ -56,6 +56,6 @@
     "dashboards": [{"name": "Docs: Scheduled Snapshots", "href": "https://2.3.docs.portworx.com/portworx-install-with-kubernetes/storage-operations/create-snapshots/scheduled/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1.13"
+    "imageid": "portworx-kubernetes-running:1.18"
     }
 }
