@@ -53,9 +53,9 @@
     "showdashboard": true,
     "hidefinish": false,
     "hideintro": true,
-    "dashboards": [{"name": "Docs: Resize PVC", "href": "https://2.3.docs.portworx.com/portworx-install-with-kubernetes/storage-operations/create-pvcs/resize-pvc/"}]
+    "dashboards": [{"name": "Docs: Resize PVC", "href": "https://2.6.docs.portworx.com/portworx-install-with-kubernetes/storage-operations/create-pvcs/resize-pvc/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1.13"
+    "imageid": "portworx-kubernetes-running:1.18"
     }
 }
