@@ -63,6 +63,6 @@
     "dashboards": [{"name": "Docs: Snapshots", "href": "https://2.3.docs.portworx.com/reference/cli/snapshots/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1.13"
+    "imageid": "portworx-kubernetes-running:1.18"
     }
 }
