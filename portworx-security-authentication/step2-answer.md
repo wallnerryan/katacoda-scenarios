@@ -1,6 +1,6 @@
 Add the below args to the Portworx Deamonset:
-         - -jwt_issuer
-         - example-domain.com
+         `- -jwt_issuer`
+         `- example-domain.com`
 
 
 
@@ -26,7 +26,7 @@ Add the below environment variables to the Portworx Daemonset:
 Add the below environment variables to the Stork Deployment:
 
          - name: "PX_SHARED_SECRET"
-          valueFrom:
-             secretKeyRef:
-                name: pxkeys
-                key: stork-secret
+           valueFrom:
+               secretKeyRef:
+                  name: pxkeys
+                  key: stork-secret
