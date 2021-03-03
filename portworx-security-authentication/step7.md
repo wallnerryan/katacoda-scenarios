@@ -9,6 +9,5 @@ Make use of the following parameters while creating the token:
        --shared-secret: $PORTWORX_AUTH_SHARED_SECRET
        -token-duration: 1y
 
-
 Next, create a kubernetes secret called `px-k8s-user` in the `portworx` namespace with key `auth-token` whose value should be the token created in the previous step.
 

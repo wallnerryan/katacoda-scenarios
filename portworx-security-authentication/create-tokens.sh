@@ -1,5 +1,5 @@
 kubectl delete ds kube-keepalived-vip -n kube-system
-scp -o StrictHostKeyChecking=no /tmp/*.yaml node01:/tmp
+scp -o StrictHostKeyChecking=no /tmp/*.yaml /tmp/*.json node01:/tmp
 
 kubectl create -f /tmp/px-sc.yaml
 
