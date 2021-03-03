@@ -21,13 +21,7 @@
 	"answer": "step2-answer.md"
       },
       {
-        "title": "Apply new spec",
-        "text": "step3.md",
-        "verify": "step3-verify.sh",
-	"answer": "step3-answer.md"
-      },
-      {
-        "title": "Validate the Portworx Pods",
+        "title": "Validate the Portworx Pods and Disable Guest Role",
         "text": "step5.md",
 	"verify": "step5-verify.sh"
       },
@@ -74,9 +68,9 @@
       ],
       "host01": [
          {"file": "test-pvc.yaml", "target": "/root", "chmod": "+x"},
-	 {"file": "px-sc.yaml", "target": "/tmp", "chmod": "+x"},
-	 {"file": "px-secure-sc.yaml", "target": "/tmp", "chmod": "+x"},
-	 {"file": "auth-pvc.yaml", "target": "/root", "chmod": "+x"}
+      	 {"file": "px-sc.yaml", "target": "/tmp", "chmod": "+x"},
+      	 {"file": "px-secure-sc.yaml", "target": "/tmp", "chmod": "+x"},
+      	 {"file": "auth-pvc.yaml", "target": "/root", "chmod": "+x"}
       ]
     }
     },

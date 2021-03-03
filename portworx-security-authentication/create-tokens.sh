@@ -1,17 +1,5 @@
 kubectl delete ds kube-keepalived-vip -n kube-system
 scp -o StrictHostKeyChecking=no /tmp/*.yaml node01:/tmp
-ssh node01 "pxctl auth token generate  --auth-config /tmp/developer-authconfig.yaml --issuer myissuer  --shared-secret Sup3rs3cr3t --output /tmp/developer-self-signed-token.txt "
-
-ssh node01 "pxctl auth token generate  --auth-config /tmp/tester-authconfig.yaml --issuer myissuer  --shared-secret Sup3rs3cr3t --output /tmp/tester-self-signed-token.txt "
-
-ssh node01 "pxctl auth token generate  --auth-config /tmp/admin-authconfig.yaml --issuer myissuer  --shared-secret Sup3rs3cr3t --output /tmp/admin-self-signed-token.txt "
-
-ssh node01 "pxctl context create user-context1 --token \$(cat /tmp/developer-self-signed-token.txt)"
-
-ssh node01 "pxctl context create user-context2 --token \$(cat /tmp/tester-self-signed-token.txt)"
-
-ssh node01 "pxctl context create user-context3 --token \$(cat /tmp/admin-self-signed-token.txt)"
-
 
 kubectl create -f /tmp/px-sc.yaml
 

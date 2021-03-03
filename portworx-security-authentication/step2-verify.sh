@@ -1,4 +1,4 @@
-if [ `cat /root/px-spec.yaml | grep -A1 jwt_issuer | grep example-domain.com| wc -l` -eq 1 ] && [ `cat /root/px-spec.yaml | grep PORTWORX_AUTH | wc -l` -eq 3 ] 
-then
-	echo "done"
+if  [ `kubectl -n kube-system get pods -l name=portworx | grep portworx | wc -l ` -eq 3 ] && [[ `kubectl -n kube-system describe ds portworx | grep -i jwt_issuer` ]] && [ `kubectl -n kube-system describe ds portworx | grep -i "PORTWORX_AUTH" | wc -l` -eq  3  ]
+then 
+	echo "done"; 
 fi
