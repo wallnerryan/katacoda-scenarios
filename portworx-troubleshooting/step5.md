@@ -4,4 +4,4 @@
 () StorageClass does not use Portworx Volume
 () No space left in the device
 () Portworx Service is not running.
-(*) Auth Secret Empty.
+(*) Access denied without authentication token.

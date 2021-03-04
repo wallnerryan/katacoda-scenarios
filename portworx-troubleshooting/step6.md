@@ -11,4 +11,4 @@
       openstorage.io/auth-secret-name: px-k8s-user
       openstorage.io/auth-secret-namespace: portworx
       
-Note: Please wait for the pod of the `mysql` deployment to be `Ready` before proceeding to the next question.
+Note: Please wait for the pod of the `mysql` deployment to be `Ready` before proceeding to the next question. 

@@ -2,7 +2,7 @@
   "title": "Portworx Troubleshooting lab",
   "description": "In this lab, we will troubleshoot issues with the Portworx ckusters",
   "difficulty": "Beginner",
-  "time": "60",
+  "time": "120",
   "details": {
     "steps": [
       {

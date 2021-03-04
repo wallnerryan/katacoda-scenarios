@@ -15,7 +15,7 @@ Here are some handy links that should help with the troubleshooting:
 3. [IO Profiles](https://2.3.docs.portworx.com/install-with-other/operate-and-maintain/performance-and-tuning/tuning/)
 
 
-Please wait for the Portworx pods to be Ready 2/2, they will restart in a rolling fashing.
+Please wait for the Portworx pods to be Ready 2/2, they will restart as a rolling update. This may take up to 10 minutes.
 `watch kubectl -n kube-system get pods -l name=portworx`{{execute}}
 
 To get back to the terminal:
