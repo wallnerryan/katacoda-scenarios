@@ -344,13 +344,27 @@ spec:
           imagePullPolicy: Always
           args:
             ["-k", "etcd:http://master:4001", "-c", "px-demo-a2261498-d7b9-44e0-9faf-fbc65565a16c", "-s", "/dev/vdb", "-secret_type", "k8s", 
-             "-x", "kubernetes"]
+             "-x", "kubernetes", "-jwt_issuer", "example-domain.com"]
           env:
             - name: "PX_TEMPLATE_VERSION"
               value: "v4"
             - name: CSI_ENDPOINT
               value: unix:///var/lib/kubelet/plugins/pxd.portworx.com/csi.sock
-            
+            - name: "PORTWORX_AUTH_JWT_SHAREDSECRET"
+              valueFrom:
+                secretKeyRef:
+                  name: pxkeys
+                  key: shared-secret
+            - name: "PORTWORX_AUTH_SYSTEM_KEY"
+              valueFrom:
+                secretKeyRef:
+                  name: pxkeys
+                  key: system-secret
+            - name: "PORTWORX_AUTH_STORK_KEY"
+              valueFrom:
+                secretKeyRef:
+                  name: pxkeys
+                  key: stork-secret
           livenessProbe:
             periodSeconds: 30
             initialDelaySeconds: 840 # allow image pull in slow networks
@@ -1306,6 +1320,11 @@ spec:
         env:
         - name: "PX_SERVICE_NAME"
           value: "portworx-api"
+        - name: "PX_SHARED_SECRET"
+          valueFrom:
+            secretKeyRef:
+              name: pxkeys
+              key: stork-secret
         resources:
           requests:
             cpu: '0.1'
