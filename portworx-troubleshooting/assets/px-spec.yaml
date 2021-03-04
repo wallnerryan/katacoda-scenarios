@@ -1,4 +1,4 @@
-# SOURCE: https://install.portworx.com/?mc=false&kbver=1.13.0&k=etcd%3Ahttp%3A%2F%2Fmaster%3A4001&s=%2Fdev%2Fvdb&c=px-demo-a2261498-d7b9-44e0-9faf-fbc65565a16c&eks=true&stork=true&csi=true&st=k8s
+# SOURCE: https://install.portworx.com/?mc=false&kbver=1.18.0&k=etcd%3Ahttp%3A%2F%2Fmaster%3A4001&s=%2Fdev%2Fvdb&c=px-demo-a2261498-d7b9-44e0-9faf-fbc65565a16c&eks=true&stork=true&csi=true&st=k8s
 ---
 kind: Service
 apiVersion: v1
@@ -16,10 +16,6 @@ spec:
       protocol: TCP
       port: 9001
       targetPort: 9001
-    - name: px-kvdb
-      protocol: TCP
-      port: 9019
-      targetPort: 9019
     - name: px-sdk
       protocol: TCP
       port: 9020
@@ -50,6 +46,7 @@ spec:
     shortNames:
     - vps
     - vp
+  preserveUnknownFields: false
   validation:
     openAPIV3Schema:
       type: object
@@ -66,6 +63,9 @@ spec:
               items:
                 type: object
                 properties:
+                  affected_replicas:
+                    type: integer
+                    description: The number of volume replicas affected by the replica affinity
                   enforcement:
                     type: string
                     enum:
@@ -108,6 +108,9 @@ spec:
               items:
                 type: object
                 properties:
+                  affected_replicas:
+                    type: integer
+                    description: The number of volume replicas affected by the replica anti affinity
                   enforcement:
                     type: string
                     enum:
@@ -232,6 +235,9 @@ rules:
 - apiGroups: [""]
   resources: ["persistentvolumeclaims", "persistentvolumes"]
   verbs: ["get", "list"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["storageclasses"]
+  verbs: ["get", "list"]
 - apiGroups: [""]
   resources: ["configmaps"]
   verbs: ["get", "list", "update", "create"]
@@ -245,6 +251,9 @@ rules:
 - apiGroups: ["stork.libopenstorage.org"]
   resources: ["backuplocations"]
   verbs: ["get", "list"]
+- apiGroups: ["core.libopenstorage.org"]
+  resources: ["*"]
+  verbs: ["*"]
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create"]
@@ -292,6 +301,7 @@ roleRef:
   name: px-role
   apiGroup: rbac.authorization.k8s.io
 ---
+
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
@@ -300,7 +310,7 @@ metadata:
   labels:
     name: portworx
   annotations:
-    portworx.com/install-source: "https://install.portworx.com/?mc=false&kbver=1.13.0&k=etcd%3Ahttp%3A%2F%2Fmaster%3A4001&s=%2Fdev%2Fvdb&c=px-demo-a2261498-d7b9-44e0-9faf-fbc65565a16c&eks=true&stork=true&csi=true&st=k8s"
+    portworx.com/install-source: "https://install.portworx.com/?mc=false&kbver=1.18.0&k=etcd%3Ahttp%3A%2F%2Fmaster%3A4001&s=%2Fdev%2Fvdb&c=px-demo-a2261498-d7b9-44e0-9faf-fbc65565a16c&eks=true&stork=true&csi=true&st=k8s"
 spec:
   selector:
     matchLabels:
@@ -309,7 +319,7 @@ spec:
   updateStrategy:
     type: RollingUpdate
     rollingUpdate:
-      maxUnavailable: 3
+      maxUnavailable: 1
   template:
     metadata:
       labels:
@@ -330,32 +340,17 @@ spec:
       hostPID: false
       containers:
         - name: portworx
-          image: portworx/oci-monitor:2.3.2
+          image: portworx/oci-monitor:2.6.1
           imagePullPolicy: Always
           args:
-            ["-k", "etcd://master:4001", "-c", "px-demo", "-s", "/dev/vdb", "-secret_type", "k8s", "-x", "kubernetes", "-jwt_issuer", "example-domain.com"]
+            ["-k", "etcd:http://master:4001", "-c", "px-demo-a2261498-d7b9-44e0-9faf-fbc65565a16c", "-s", "/dev/vdb", "-secret_type", "k8s", 
+             "-x", "kubernetes"]
           env:
-            - name: "AUTO_NODE_RECOVERY_TIMEOUT_IN_SECS"
-              value: "1500"
             - name: "PX_TEMPLATE_VERSION"
               value: "v4"
-            - name: CSI_ENDPOINT 
+            - name: CSI_ENDPOINT
               value: unix:///var/lib/kubelet/plugins/pxd.portworx.com/csi.sock
-            - name: "PORTWORX_AUTH_JWT_SHAREDSECRET"
-              valueFrom:
-                secretKeyRef:
-                  name: pxkeys
-                  key: shared-secret
-            - name: "PORTWORX_AUTH_SYSTEM_KEY"
-              valueFrom:
-                secretKeyRef:
-                  name: pxkeys
-                  key: system-secret
-            - name: "PORTWORX_AUTH_STORK_KEY"
-              valueFrom:
-                secretKeyRef:
-                  name: pxkeys
-                  key: stork-secret
+            
           livenessProbe:
             periodSeconds: 30
             initialDelaySeconds: 840 # allow image pull in slow networks
@@ -381,14 +376,10 @@ spec:
               mountPath: /run/containerd
             - name: criosock
               mountPath: /var/run/crio
-            - name: crioconf
-              mountPath: /etc/crictl.yaml
             - name: etcpwx
               mountPath: /etc/pwx
             - name: dev
               mountPath: /dev
-            - name: csi-driver-path
-              mountPath: /var/lib/kubelet/plugins/pxd.portworx.com
             - name: optpwx
               mountPath: /opt/pwx
             - name: procmount
@@ -405,11 +396,11 @@ spec:
               mountPath: /var/run/dbus
         - name: csi-node-driver-registrar
           image: quay.io/k8scsi/csi-node-driver-registrar:v1.1.0
+          imagePullPolicy: Always
           args:
             - "--v=5"
             - "--csi-address=$(ADDRESS)"
             - "--kubelet-registration-path=/var/lib/kubelet/plugins/pxd.portworx.com/csi.sock"
-          imagePullPolicy: Always
           env:
             - name: ADDRESS
               value: /csi/csi.sock
@@ -439,10 +430,6 @@ spec:
         - name: criosock
           hostPath:
             path: /var/run/crio
-        - name: crioconf
-          hostPath:
-            path: /etc/crictl.yaml
-            type: FileOrCreate
         - name: etcpwx
           hostPath:
             path: /etc/pwx
@@ -519,13 +506,10 @@ rules:
   resources: ["secrets"]
   verbs: ["get", "list"]
 - apiGroups: ["snapshot.storage.k8s.io"]
-  resources: ["volumesnapshots", "volumesnapshotcontents", "volumesnapshotclasses", "volumesnapshots/status"]
+  resources: ["volumesnapshots", "volumesnapshotcontents", "volumesnapshotclasses", "volumesnapshots/status", "volumesnapshotcontents/status"]
   verbs: ["create", "get", "list", "watch", "update", "delete"]
-- apiGroups: [""]
-  resources: ["nodes"]
-  verbs: ["get", "list", "watch"]
-- apiGroups: ["csi.storage.k8s.io"]
-  resources: ["csinodeinfos"]
+- apiGroups: ["storage.k8s.io"]
+  resources: ["csinodes"]
   verbs: ["get", "list", "watch", "update"]
 - apiGroups: [""]
   resources: ["nodes"]
@@ -535,9 +519,6 @@ rules:
   verbs: ["create", "delete"]
 - apiGroups: [""]
   resources: ["endpoints"]
-  verbs: ["get", "watch", "list", "delete", "update", "create"]
-- apiGroups: [""]
-  resources: ["configmaps"]
   verbs: ["get", "watch", "list", "delete", "update", "create"]
 - apiGroups: ["coordination.k8s.io"]
   resources: ["leases"]
@@ -593,14 +574,14 @@ spec:
       serviceAccount: px-csi-account
       containers:
         - name: csi-external-provisioner
+          image: quay.io/openstorage/csi-provisioner:v1.6.0-1
           imagePullPolicy: Always
-          image: quay.io/openstorage/csi-provisioner:v1.4.0-1
           args:
-            - "--v=5"
+            - "--v=3"
             - "--provisioner=pxd.portworx.com"
             - "--csi-address=$(ADDRESS)"
             - "--enable-leader-election"
-            - "--leader-election-type=endpoints"
+            - "--leader-election-type=leases"
           env:
             - name: ADDRESS
               value: /csi/csi.sock
@@ -609,11 +590,11 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
-        - name: csi-attacher
+        - name: csi-snapshotter
+          image: quay.io/k8scsi/csi-snapshotter:v2.1.0
           imagePullPolicy: Always
-          image: quay.io/k8scsi/csi-attacher:v1.2.0
           args:
-            - "--v=5"
+            - "--v=3"
             - "--csi-address=$(ADDRESS)"
             - "--leader-election=true"
           env:
@@ -624,12 +605,25 @@ spec:
           volumeMounts:
             - name: socket-dir
               mountPath: /csi
-        - name: csi-snapshotter
-          image: quay.io/openstorage/csi-snapshotter:v1.2.2-1
+        - name: csi-snapshot-controller
+          image: quay.io/k8scsi/snapshot-controller:v2.1.0
           imagePullPolicy: Always
-          image: quay.io/k8scsi/csi-snapshotter:v2.0.0
           args:
-            - "--v=5"
+            - "--v=3"
+            - "--leader-election=true"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+        - name: csi-resizer
+          image: quay.io/k8scsi/csi-resizer:v0.5.0
+          imagePullPolicy: Always
+          args:
+            - "--v=3"
             - "--csi-address=$(ADDRESS)"
             - "--leader-election=true"
           env:
@@ -645,6 +639,510 @@ spec:
           hostPath:
             path: /var/lib/kubelet/plugins/pxd.portworx.com
             type: DirectoryOrCreate
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+    api-approved.kubernetes.io: "https://github.com/kubernetes-csi/external-snapshotter/pull/260"
+  creationTimestamp: null
+  name: volumesnapshotclasses.snapshot.storage.k8s.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .driver
+    name: Driver
+    type: string
+  - JSONPath: .deletionPolicy
+    description: Determines whether a VolumeSnapshotContent created through the VolumeSnapshotClass
+      should be deleted when its bound VolumeSnapshot is deleted.
+    name: DeletionPolicy
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    name: Age
+    type: date
+  group: snapshot.storage.k8s.io
+  names:
+    kind: VolumeSnapshotClass
+    listKind: VolumeSnapshotClassList
+    plural: volumesnapshotclasses
+    singular: volumesnapshotclass
+  preserveUnknownFields: false
+  scope: Cluster
+  subresources: {}
+  validation:
+    openAPIV3Schema:
+      description: VolumeSnapshotClass specifies parameters that a underlying storage
+        system uses when creating a volume snapshot. A specific VolumeSnapshotClass
+        is used by specifying its name in a VolumeSnapshot object. VolumeSnapshotClasses
+        are non-namespaced
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        deletionPolicy:
+          description: deletionPolicy determines whether a VolumeSnapshotContent created
+            through the VolumeSnapshotClass should be deleted when its bound VolumeSnapshot
+            is deleted. Supported values are "Retain" and "Delete". "Retain" means
+            that the VolumeSnapshotContent and its physical snapshot on underlying
+            storage system are kept. "Delete" means that the VolumeSnapshotContent
+            and its physical snapshot on underlying storage system are deleted. Required.
+          enum:
+          - Delete
+          - Retain
+          type: string
+        driver:
+          description: driver is the name of the storage driver that handles this
+            VolumeSnapshotClass. Required.
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        parameters:
+          additionalProperties:
+            type: string
+          description: parameters is a key-value map with storage driver specific
+            parameters for creating snapshots. These values are opaque to Kubernetes.
+          type: object
+      required:
+      - deletionPolicy
+      - driver
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+    api-approved.kubernetes.io: "https://github.com/kubernetes-csi/external-snapshotter/pull/260"
+  creationTimestamp: null
+  name: volumesnapshots.snapshot.storage.k8s.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.readyToUse
+    description: Indicates if a snapshot is ready to be used to restore a volume.
+    name: ReadyToUse
+    type: boolean
+  - JSONPath: .spec.source.persistentVolumeClaimName
+    description: Name of the source PVC from where a dynamically taken snapshot will
+      be created.
+    name: SourcePVC
+    type: string
+  - JSONPath: .spec.source.volumeSnapshotContentName
+    description: Name of the VolumeSnapshotContent which represents a pre-provisioned
+      snapshot.
+    name: SourceSnapshotContent
+    type: string
+  - JSONPath: .status.restoreSize
+    description: Represents the complete size of the snapshot.
+    name: RestoreSize
+    type: string
+  - JSONPath: .spec.volumeSnapshotClassName
+    description: The name of the VolumeSnapshotClass requested by the VolumeSnapshot.
+    name: SnapshotClass
+    type: string
+  - JSONPath: .status.boundVolumeSnapshotContentName
+    description: The name of the VolumeSnapshotContent to which this VolumeSnapshot
+      is bound.
+    name: SnapshotContent
+    type: string
+  - JSONPath: .status.creationTime
+    description: Timestamp when the point-in-time snapshot is taken by the underlying
+      storage system.
+    name: CreationTime
+    type: date
+  - JSONPath: .metadata.creationTimestamp
+    name: Age
+    type: date
+  group: snapshot.storage.k8s.io
+  names:
+    kind: VolumeSnapshot
+    listKind: VolumeSnapshotList
+    plural: volumesnapshots
+    singular: volumesnapshot
+  preserveUnknownFields: false
+  scope: Namespaced
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: VolumeSnapshot is a user's request for either creating a point-in-time
+        snapshot of a persistent volume, or binding to a pre-existing snapshot.
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        spec:
+          description: 'spec defines the desired characteristics of a snapshot requested
+            by a user. More info: https://kubernetes.io/docs/concepts/storage/volume-snapshots#volumesnapshots
+            Required.'
+          properties:
+            source:
+              description: source specifies where a snapshot will be created from.
+                This field is immutable after creation. Required.
+              properties:
+                persistentVolumeClaimName:
+                  description: persistentVolumeClaimName specifies the name of the
+                    PersistentVolumeClaim object in the same namespace as the VolumeSnapshot
+                    object where the snapshot should be dynamically taken from. This
+                    field is immutable.
+                  type: string
+                volumeSnapshotContentName:
+                  description: volumeSnapshotContentName specifies the name of a pre-existing
+                    VolumeSnapshotContent object. This field is immutable.
+                  type: string
+              type: object
+            volumeSnapshotClassName:
+              description: 'volumeSnapshotClassName is the name of the VolumeSnapshotClass
+                requested by the VolumeSnapshot. If not specified, the default snapshot
+                class will be used if one exists. If not specified, and there is no
+                default snapshot class, dynamic snapshot creation will fail. Empty
+                string is not allowed for this field. TODO(xiangqian): a webhook validation
+                on empty string. More info: https://kubernetes.io/docs/concepts/storage/volume-snapshot-classes'
+              type: string
+          required:
+          - source
+          type: object
+        status:
+          description: 'status represents the current information of a snapshot. NOTE:
+            status can be modified by sources other than system controllers, and must
+            not be depended upon for accuracy. Controllers should only use information
+            from the VolumeSnapshotContent object after verifying that the binding
+            is accurate and complete.'
+          properties:
+            boundVolumeSnapshotContentName:
+              description: 'boundVolumeSnapshotContentName represents the name of
+                the VolumeSnapshotContent object to which the VolumeSnapshot object
+                is bound. If not specified, it indicates that the VolumeSnapshot object
+                has not been successfully bound to a VolumeSnapshotContent object
+                yet. NOTE: Specified boundVolumeSnapshotContentName alone does not
+                mean binding       is valid. Controllers MUST always verify bidirectional
+                binding between       VolumeSnapshot and VolumeSnapshotContent to
+                avoid possible security issues.'
+              type: string
+            creationTime:
+              description: creationTime is the timestamp when the point-in-time snapshot
+                is taken by the underlying storage system. In dynamic snapshot creation
+                case, this field will be filled in with the "creation_time" value
+                returned from CSI "CreateSnapshotRequest" gRPC call. For a pre-existing
+                snapshot, this field will be filled with the "creation_time" value
+                returned from the CSI "ListSnapshots" gRPC call if the driver supports
+                it. If not specified, it indicates that the creation time of the snapshot
+                is unknown.
+              format: date-time
+              type: string
+            error:
+              description: error is the last observed error during snapshot creation,
+                if any. This field could be helpful to upper level controllers(i.e.,
+                application controller) to decide whether they should continue on
+                waiting for the snapshot to be created based on the type of error
+                reported.
+              properties:
+                message:
+                  description: 'message is a string detailing the encountered error
+                    during snapshot creation if specified. NOTE: message may be logged,
+                    and it should not contain sensitive information.'
+                  type: string
+                time:
+                  description: time is the timestamp when the error was encountered.
+                  format: date-time
+                  type: string
+              type: object
+            readyToUse:
+              description: readyToUse indicates if a snapshot is ready to be used
+                to restore a volume. In dynamic snapshot creation case, this field
+                will be filled in with the "ready_to_use" value returned from CSI
+                "CreateSnapshotRequest" gRPC call. For a pre-existing snapshot, this
+                field will be filled with the "ready_to_use" value returned from the
+                CSI "ListSnapshots" gRPC call if the driver supports it, otherwise,
+                this field will be set to "True". If not specified, it means the readiness
+                of a snapshot is unknown.
+              type: boolean
+            restoreSize:
+              anyOf:
+              - type: integer
+              - type: string
+              description: restoreSize represents the complete size of the snapshot
+                in bytes. In dynamic snapshot creation case, this field will be filled
+                in with the "size_bytes" value returned from CSI "CreateSnapshotRequest"
+                gRPC call. For a pre-existing snapshot, this field will be filled
+                with the "size_bytes" value returned from the CSI "ListSnapshots"
+                gRPC call if the driver supports it. When restoring a volume from
+                this snapshot, the size of the volume MUST NOT be smaller than the
+                restoreSize if it is specified, otherwise the restoration will fail.
+                If not specified, it indicates that the size is unknown.
+              pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+              x-kubernetes-int-or-string: true
+          type: object
+      required:
+      - spec
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+    api-approved.kubernetes.io: "https://github.com/kubernetes-csi/external-snapshotter/pull/260"
+  creationTimestamp: null
+  name: volumesnapshotcontents.snapshot.storage.k8s.io
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.readyToUse
+    description: Indicates if a snapshot is ready to be used to restore a volume.
+    name: ReadyToUse
+    type: boolean
+  - JSONPath: .status.restoreSize
+    description: Represents the complete size of the snapshot in bytes
+    name: RestoreSize
+    type: integer
+  - JSONPath: .spec.deletionPolicy
+    description: Determines whether this VolumeSnapshotContent and its physical snapshot
+      on the underlying storage system should be deleted when its bound VolumeSnapshot
+      is deleted.
+    name: DeletionPolicy
+    type: string
+  - JSONPath: .spec.driver
+    description: Name of the CSI driver used to create the physical snapshot on the
+      underlying storage system.
+    name: Driver
+    type: string
+  - JSONPath: .spec.volumeSnapshotClassName
+    description: Name of the VolumeSnapshotClass to which this snapshot belongs.
+    name: VolumeSnapshotClass
+    type: string
+  - JSONPath: .spec.volumeSnapshotRef.name
+    description: Name of the VolumeSnapshot object to which this VolumeSnapshotContent
+      object is bound.
+    name: VolumeSnapshot
+    type: string
+  - JSONPath: .metadata.creationTimestamp
+    name: Age
+    type: date
+  group: snapshot.storage.k8s.io
+  names:
+    kind: VolumeSnapshotContent
+    listKind: VolumeSnapshotContentList
+    plural: volumesnapshotcontents
+    singular: volumesnapshotcontent
+  preserveUnknownFields: false
+  scope: Cluster
+  subresources:
+    status: {}
+  validation:
+    openAPIV3Schema:
+      description: VolumeSnapshotContent represents the actual "on-disk" snapshot
+        object in the underlying storage system
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        spec:
+          description: spec defines properties of a VolumeSnapshotContent created
+            by the underlying storage system. Required.
+          properties:
+            deletionPolicy:
+              description: deletionPolicy determines whether this VolumeSnapshotContent
+                and its physical snapshot on the underlying storage system should
+                be deleted when its bound VolumeSnapshot is deleted. Supported values
+                are "Retain" and "Delete". "Retain" means that the VolumeSnapshotContent
+                and its physical snapshot on underlying storage system are kept. "Delete"
+                means that the VolumeSnapshotContent and its physical snapshot on
+                underlying storage system are deleted. In dynamic snapshot creation
+                case, this field will be filled in with the "DeletionPolicy" field
+                defined in the VolumeSnapshotClass the VolumeSnapshot refers to. For
+                pre-existing snapshots, users MUST specify this field when creating
+                the VolumeSnapshotContent object. Required.
+              enum:
+              - Delete
+              - Retain
+              type: string
+            driver:
+              description: driver is the name of the CSI driver used to create the
+                physical snapshot on the underlying storage system. This MUST be the
+                same as the name returned by the CSI GetPluginName() call for that
+                driver. Required.
+              type: string
+            source:
+              description: source specifies from where a snapshot will be created.
+                This field is immutable after creation. Required.
+              properties:
+                snapshotHandle:
+                  description: snapshotHandle specifies the CSI "snapshot_id" of a
+                    pre-existing snapshot on the underlying storage system. This field
+                    is immutable.
+                  type: string
+                volumeHandle:
+                  description: volumeHandle specifies the CSI "volume_id" of the volume
+                    from which a snapshot should be dynamically taken from. This field
+                    is immutable.
+                  type: string
+              type: object
+            volumeSnapshotClassName:
+              description: name of the VolumeSnapshotClass to which this snapshot
+                belongs.
+              type: string
+            volumeSnapshotRef:
+              description: volumeSnapshotRef specifies the VolumeSnapshot object to
+                which this VolumeSnapshotContent object is bound. VolumeSnapshot.Spec.VolumeSnapshotContentName
+                field must reference to this VolumeSnapshotContent's name for the
+                bidirectional binding to be valid. For a pre-existing VolumeSnapshotContent
+                object, name and namespace of the VolumeSnapshot object MUST be provided
+                for binding to happen. This field is immutable after creation. Required.
+              properties:
+                apiVersion:
+                  description: API version of the referent.
+                  type: string
+                fieldPath:
+                  description: 'If referring to a piece of an object instead of an
+                    entire object, this string should contain a valid JSON/Go field
+                    access statement, such as desiredState.manifest.containers[2].
+                    For example, if the object reference is to a container within
+                    a pod, this would take on a value like: "spec.containers{name}"
+                    (where "name" refers to the name of the container that triggered
+                    the event) or if no container name is specified "spec.containers[2]"
+                    (container with index 2 in this pod). This syntax is chosen only
+                    to have some well-defined way of referencing a part of an object.
+                    TODO: this design is not final and this field is subject to change
+                    in the future.'
+                  type: string
+                kind:
+                  description: 'Kind of the referent. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                  type: string
+                name:
+                  description: 'Name of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                  type: string
+                namespace:
+                  description: 'Namespace of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                  type: string
+                resourceVersion:
+                  description: 'Specific resourceVersion to which this reference is
+                    made, if any. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                  type: string
+                uid:
+                  description: 'UID of the referent. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                  type: string
+              type: object
+          required:
+          - deletionPolicy
+          - driver
+          - source
+          - volumeSnapshotRef
+          type: object
+        status:
+          description: status represents the current information of a snapshot.
+          properties:
+            creationTime:
+              description: creationTime is the timestamp when the point-in-time snapshot
+                is taken by the underlying storage system. In dynamic snapshot creation
+                case, this field will be filled in with the "creation_time" value
+                returned from CSI "CreateSnapshotRequest" gRPC call. For a pre-existing
+                snapshot, this field will be filled with the "creation_time" value
+                returned from the CSI "ListSnapshots" gRPC call if the driver supports
+                it. If not specified, it indicates the creation time is unknown. The
+                format of this field is a Unix nanoseconds time encoded as an int64.
+                On Unix, the command `date +%s%N` returns the current time in nanoseconds
+                since 1970-01-01 00:00:00 UTC.
+              format: int64
+              type: integer
+            error:
+              description: error is the latest observed error during snapshot creation,
+                if any.
+              properties:
+                message:
+                  description: 'message is a string detailing the encountered error
+                    during snapshot creation if specified. NOTE: message may be logged,
+                    and it should not contain sensitive information.'
+                  type: string
+                time:
+                  description: time is the timestamp when the error was encountered.
+                  format: date-time
+                  type: string
+              type: object
+            readyToUse:
+              description: readyToUse indicates if a snapshot is ready to be used
+                to restore a volume. In dynamic snapshot creation case, this field
+                will be filled in with the "ready_to_use" value returned from CSI
+                "CreateSnapshotRequest" gRPC call. For a pre-existing snapshot, this
+                field will be filled with the "ready_to_use" value returned from the
+                CSI "ListSnapshots" gRPC call if the driver supports it, otherwise,
+                this field will be set to "True". If not specified, it means the readiness
+                of a snapshot is unknown.
+              type: boolean
+            restoreSize:
+              description: restoreSize represents the complete size of the snapshot
+                in bytes. In dynamic snapshot creation case, this field will be filled
+                in with the "size_bytes" value returned from CSI "CreateSnapshotRequest"
+                gRPC call. For a pre-existing snapshot, this field will be filled
+                with the "size_bytes" value returned from the CSI "ListSnapshots"
+                gRPC call if the driver supports it. When restoring a volume from
+                this snapshot, the size of the volume MUST NOT be smaller than the
+                restoreSize if it is specified, otherwise the restoration will fail.
+                If not specified, it indicates that the size is unknown.
+              format: int64
+              minimum: 0
+              type: integer
+            snapshotHandle:
+              description: snapshotHandle is the CSI "snapshot_id" of a snapshot on
+                the underlying storage system. If not specified, it indicates that
+                dynamic snapshot creation has either failed or it is still in progress.
+              type: string
+          type: object
+      required:
+      - spec
+      type: object
+  version: v1beta1
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
 ---
 kind: Service
 apiVersion: v1
@@ -718,83 +1216,16 @@ spec:
       restartPolicy: Always
       serviceAccountName: px-account
 ---
-apiVersion: apiextensions.k8s.io/v1beta1
-kind: CustomResourceDefinition
+apiVersion: storage.k8s.io/v1beta1
+kind: CSIDriver
 metadata:
-  name: csinodeinfos.csi.storage.k8s.io
-  labels:
-    addonmanager.kubernetes.io/mode: Reconcile
+  name: pxd.portworx.com
 spec:
-  group: csi.storage.k8s.io
-  names:
-    kind: CSINodeInfo
-    plural: csinodeinfos
-  scope: Cluster
-  validation:
-    openAPIV3Schema:
-      properties:
-        spec:
-          description: Specification of CSINodeInfo
-          properties:
-            drivers:
-              description: List of CSI drivers running on the node and their specs.
-              type: array
-              items:
-                properties:
-                  name:
-                    description: The CSI driver that this object refers to.
-                    type: string
-                  nodeID:
-                    description: The node from the driver point of view.
-                    type: string
-                  topologyKeys:
-                    description: List of keys supported by the driver.
-                    items:
-                      type: string
-                    type: array
-        status:
-          description: Status of CSINodeInfo
-          properties:
-            drivers:
-              description: List of CSI drivers running on the node and their statuses.
-              type: array
-              items:
-                properties:
-                  name:
-                    description: The CSI driver that this object refers to.
-                    type: string
-                  available:
-                    description: Whether the CSI driver is installed.
-                    type: boolean
-                  volumePluginMechanism:
-                    description: Indicates to external components the required mechanism
-                      to use for any in-tree plugins replaced by this driver.
-                    pattern: in-tree|csi
-                    type: string
-  version: v1alpha1
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: stork-config
-  namespace: kube-system
-data:
-  policy.cfg: |-
-    {
-      "kind": "Policy",
-      "apiVersion": "v1",
-      "extenders": [
-        {
-          "urlPrefix": "http://stork-service.kube-system:8099",
-          "apiVersion": "v1beta1",
-          "filterVerb": "filter",
-          "prioritizeVerb": "prioritize",
-          "weight": 5,
-          "enableHttps": false,
-          "nodeCacheCapable": false
-        }
-      ]
-    }
+  attachRequired: false
+  podInfoOnMount: true
+  volumeLifecycleModes:
+  - Persistent
+  - Ephemeral
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -824,19 +1255,6 @@ roleRef:
   name: stork-role
   apiGroup: rbac.authorization.k8s.io
 ---
-kind: Service
-apiVersion: v1
-metadata:
-  name: stork-service
-  namespace: kube-system
-spec:
-  selector:
-    name: stork
-  ports:
-    - protocol: TCP
-      port: 8099
-      targetPort: 8099
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -864,28 +1282,6 @@ spec:
         name: stork
         tier: control-plane
     spec:
-      containers:
-      - command:
-        - /stork
-        - --driver=pxd
-        - --verbose
-        - --leader-elect=true
-        - --health-monitor-interval=120
-        imagePullPolicy: Always
-        image: openstorage/stork:2.3.1
-        env:
-        - name: "PX_SERVICE_NAME"
-          value: "portworx-api"
-        - name: "PX_SHARED_SECRET"
-          valueFrom:
-            secretKeyRef:
-              name: pxkeys
-              key: stork-secret
-        resources:
-          requests:
-            cpu: '0.1'
-        name: stork
-      hostPID: false
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -896,6 +1292,24 @@ spec:
                     values:
                     - stork
               topologyKey: "kubernetes.io/hostname"
+      hostPID: false
+      containers:
+      - command:
+        - /stork
+        - --driver=pxd
+        - --verbose
+        - --leader-elect=true
+        - --health-monitor-interval=120
+        - --webhook-controller=false
+        image: openstorage/stork:2.6.2
+        imagePullPolicy: Always
+        env:
+        - name: "PX_SERVICE_NAME"
+          value: "portworx-api"
+        resources:
+          requests:
+            cpu: '0.1'
+        name: stork
       serviceAccountName: stork-account
 ---
 kind: StorageClass
@@ -903,6 +1317,48 @@ apiVersion: storage.k8s.io/v1
 metadata:
   name: stork-snapshot-sc
 provisioner: stork-snapshot
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: stork-service
+  namespace: kube-system
+spec:
+  selector:
+    name: stork
+  ports:
+    - name: extender
+      protocol: TCP
+      port: 8099
+      targetPort: 8099
+    - name: webhook
+      protocol: TCP
+      port: 443
+      targetPort: 443
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: stork-config
+  namespace: kube-system
+data:
+  policy.cfg: |-
+    {
+      "kind": "Policy",
+      "apiVersion": "v1",
+      "extenders": [
+        {
+          "urlPrefix": "http://stork-service.kube-system:8099",
+          "apiVersion": "v1beta1",
+          "filterVerb": "filter",
+          "prioritizeVerb": "prioritize",
+          "weight": 5,
+          "enableHttps": false,
+          "nodeCacheCapable": false,
+          "httpTimeout": 300000000000
+        }
+      ]
+    }
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -997,29 +1453,6 @@ spec:
         name: stork-scheduler
       name: stork-scheduler
     spec:
-      containers:
-      - command:
-        - /usr/local/bin/kube-scheduler
-        - --address=0.0.0.0
-        - --leader-elect=true
-        - --scheduler-name=stork
-        - --policy-configmap=stork-config
-        - --policy-configmap-namespace=kube-system
-        - --lock-object-name=stork-scheduler
-        image: gcr.io/google_containers/kube-scheduler-amd64:v1.13.0
-        livenessProbe:
-          httpGet:
-            path: /healthz
-            port: 10251
-          initialDelaySeconds: 15
-        name: stork-scheduler
-        readinessProbe:
-          httpGet:
-            path: /healthz
-            port: 10251
-        resources:
-          requests:
-            cpu: '0.1'
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -1031,6 +1464,30 @@ spec:
                     - stork-scheduler
               topologyKey: "kubernetes.io/hostname"
       hostPID: false
+      containers:
+        - command:
+          - /usr/local/bin/kube-scheduler
+          - --address=0.0.0.0
+          - --leader-elect=true
+          - --scheduler-name=stork
+          - --policy-configmap=stork-config
+          - --policy-configmap-namespace=kube-system
+          - --lock-object-name=stork-scheduler
+          image: gcr.io/google_containers/kube-scheduler-amd64:v1.18.0
+          imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 10251
+            initialDelaySeconds: 15
+          name: stork-scheduler
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 10251
+          resources:
+            requests:
+              cpu: '0.1'
       serviceAccountName: stork-scheduler-account
 ---
 apiVersion: v1
@@ -1078,8 +1535,11 @@ rules:
   resources: ["serviceaccounts"]
   verbs: ["get", "create"]
 - apiGroups: [""]
+  resources: ["serviceaccounts/token"]
+  verbs: ["create"]
+- apiGroups: [""]
   resources: ["configmaps"]
-  verbs: ["get", "create", "update"]
+  verbs: ["get", "create", "update", "list", "watch"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -1121,6 +1581,17 @@ spec:
         name: portworx-pvc-controller
         tier: control-plane
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: "name"
+                    operator: In
+                    values:
+                    - portworx-pvc-controller
+              topologyKey: "kubernetes.io/hostname"
+      hostNetwork: true
       containers:
       - command:
         - kube-controller-manager
@@ -1129,7 +1600,9 @@ spec:
         - --controllers=persistentvolume-binder,persistentvolume-expander
         - --use-service-account-credentials=true
         - --leader-elect-resource-lock=configmaps
-        image: gcr.io/google_containers/kube-controller-manager-amd64:v1.13.0
+        - --leader-elect-resource-name=portworx-pvc-controller
+        image: gcr.io/google_containers/kube-controller-manager-amd64:v1.18.0
+        imagePullPolicy: Always
         livenessProbe:
           failureThreshold: 8
           httpGet:
@@ -1143,7 +1616,76 @@ spec:
         resources:
           requests:
             cpu: 200m
-      hostNetwork: true
+      serviceAccountName: portworx-pvc-controller-account
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: autopilot-config
+  namespace: kube-system
+data:
+  config.yaml: |-
+    providers:
+       - name: default
+         type: prometheus
+         params: url=http://prometheus:9090
+    min_poll_interval: 2
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: autopilot-account
+  namespace: kube-system
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+   name: autopilot-role
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: autopilot-role-binding
+subjects:
+- kind: ServiceAccount
+  name: autopilot-account
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: autopilot-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  annotations:
+    scheduler.alpha.kubernetes.io/critical-pod: ""
+  labels:
+    tier: control-plane
+  name: autopilot
+  namespace: kube-system
+spec:
+  selector:
+    matchLabels:
+      name: autopilot
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  replicas: 1
+  template:
+    metadata:
+      annotations:
+        scheduler.alpha.kubernetes.io/critical-pod: ""
+      labels:
+        name: autopilot
+        tier: control-plane
+    spec:
       affinity:
         podAntiAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
@@ -1152,6 +1694,48 @@ spec:
                   - key: "name"
                     operator: In
                     values:
-                    - portworx-pvc-controller
+                    - autopilot
               topologyKey: "kubernetes.io/hostname"
-      serviceAccountName: portworx-pvc-controller-account
+      hostPID: false
+      containers:
+      - command:
+        - /autopilot
+        - -f
+        - ./etc/config/config.yaml
+        - -log-level
+        - debug
+        imagePullPolicy: Always
+        image: portworx/autopilot:1.3.0
+        resources:
+          requests:
+            cpu: '0.1'
+        securityContext:
+          privileged: false
+        name: autopilot
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/config
+      serviceAccountName: autopilot-account
+      volumes:
+        - name: config-volume
+          configMap:
+            name: autopilot-config
+            items:
+            - key: config.yaml
+              path: config.yaml
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: autopilot
+  namespace: kube-system
+  labels:
+    name: autopilot-service
+spec:
+  ports:
+    - name: autopilot
+      protocol: TCP
+      port: 9628
+  selector:
+    name: autopilot
+    tier: control-plane
