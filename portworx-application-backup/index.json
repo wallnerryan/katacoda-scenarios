@@ -74,6 +74,6 @@
     "dashboards": [{"name": "Docs: Application Backup", "href": "https://2.3.docs.portworx.com/portworx-install-with-kubernetes/storage-operations/stateful-applications/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1.13"
+    "imageid": "portworx-kubernetes-running:1.16"
     }
 }
