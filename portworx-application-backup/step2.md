@@ -18,3 +18,9 @@ To determine the endpoint, run the below command:
 To find the path/ bucket-name, run the below command:
 `mc ls px`{{execute}}'
 
+Set Disable SSL to `true`
+
+Then create
+
+```kubectl create -f /root/backup-location.yaml```{{execute}}
+
