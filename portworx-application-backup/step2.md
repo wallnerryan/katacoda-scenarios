@@ -7,18 +7,13 @@ To do this, make use of the template file located at `/root/backup-location.yaml
 
 ###### S3Config:
 
+       path: "backups"
        accessKeyID: ZZYYXXWWVVUU
        secretAccessKey: 0ldSup3rS3cr3t
 
 
 To determine the endpoint, run the below command:
 `mc admin info px`{{execute}}
-
-
-To find the path/ bucket-name, run the below command:
-`mc ls px`{{execute}}'
-
-Set Disable SSL to `true`
 
 Then create
 

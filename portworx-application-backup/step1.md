@@ -4,7 +4,4 @@ Once the set-up is complete, you can run the following command to make sure the 
 
 `mc admin info px`{{execute}}
 
-We have also setup Portworx Credentials using this Object Store. Inspect it:
-`ssh node01 pxctl cred list`{{execute}}
-
 

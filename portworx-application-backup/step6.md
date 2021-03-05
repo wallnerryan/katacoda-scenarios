@@ -11,5 +11,11 @@
        sourceNamespace: mysql-app
        destinationNamespace: clone-mysql
 
+Once finished, create the clone.
+```kubectl create -f /root/app-clone.yaml```{{execute}}
 
 Wait for the clone to complete before proceeding.
+
+```storkctl get applicationclone -n kube-system```{{execute}}
+
+

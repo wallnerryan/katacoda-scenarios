@@ -12,5 +12,5 @@ location:
     region: us-east-1
     accessKeyID: <enter details here>
     secretAccessKey: <enter details here>
-    endpoint: "<enter details here>"
-    disableSSL: false
+    endpoint: "http://<enter details here>"
+    disableSSL: true
