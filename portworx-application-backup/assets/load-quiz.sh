@@ -46,8 +46,7 @@ echo "setting up minio object store..."
 mc config host add px http://$MINIO_ENDPOINT ZZYYXXWWVVUU 0ldSup3rS3cr3t --api S3v4
 
 
-echo "Setting up a cloud credential"
-echo "ssh node01 /opt/pwx/bin/pxctl cred create --provider s3 --s3-access-key ZZYYXXWWVVUU --s3-secret-key 0ldSup3rS3cr3t --s3-region us-east-1 --s3-endpoint http://$MINIO_ENDPOINT objectstore-2"
-
-ssh -o strictHostKeyChecking=no node01 /opt/pwx/bin/pxctl cred create --provider s3 --s3-access-key ZZYYXXWWVVUU --s3-secret-key 0ldSup3rS3cr3t --s3-region us-west-2 --s3-endpoint http://$MINIO_ENDPOINT px-s3-store
+#echo "Setting up a cloud credential"
+#echo "ssh node01 /opt/pwx/bin/pxctl cred create --provider s3 --s3-access-key ZZYYXXWWVVUU --s3-secret-key 0ldSup3rS3cr3t --s3-region us-east-1 --s3-endpoint http://$MINIO_ENDPOINT objectstore-2"
+#ssh -o strictHostKeyChecking=no node01 /opt/pwx/bin/pxctl cred create --provider s3 --s3-access-key ZZYYXXWWVVUU --s3-secret-key 0ldSup3rS3cr3t --s3-region us-west-2 --s3-endpoint http://$MINIO_ENDPOINT px-s3-store
 
