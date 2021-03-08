@@ -5,5 +5,6 @@
 
 `kubectl get deployment`{{execute}}
 
+Wait until all Mongo nodes are `Ready 3/3`
 
 `kubectl get sts`{{execute}}
