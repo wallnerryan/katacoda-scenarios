@@ -60,7 +60,7 @@
     "showdashboard": true,
     "hidefinish": false,
     "hideintro": true,
-    "dashboards": [{"name": "Docs: 3D Snapshots", "href": "https://2.3.docs.portworx.com/portworx-install-with-kubernetes/storage-operations/create-snapshots/snaps-3d/"}]
+    "dashboards": [{"name": "Docs: 3D Snapshots", "href": "https://2.6.docs.portworx.com/portworx-install-with-kubernetes/storage-operations/create-snapshots/snaps-3d/"}]
     },
     "backend": {
     "imageid": "portworx-kubernetes-running:1.18"
