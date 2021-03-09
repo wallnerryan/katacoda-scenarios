@@ -64,9 +64,9 @@
     "showdashboard": true,
     "hidefinish": false,
     "hideintro": true,
-    "dashboards": [{"name": "Docs: Snapshots on K8", "href": "https://2.3.docs.portworx.com/portworx-install-with-kubernetes/storage-operations/create-snapshots/on-demand/snaps-local/"}]
+    "dashboards": [{"name": "Docs: Snapshots on K8", "href": "https://2.6.docs.portworx.com/portworx-install-with-kubernetes/storage-operations/create-snapshots/on-demand/snaps-local/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1.13"
+    "imageid": "portworx-kubernetes-running:1.18"
     }
 }
