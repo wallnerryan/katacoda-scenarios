@@ -46,9 +46,9 @@
     "showdashboard": true,
     "hidefinish": false,
     "hideintro": true,
-     "dashboards": [{"name": "Docs: Cloud Credentials", "href": "https://2.3.docs.portworx.com/reference/cli/credentials/"}]
+     "dashboards": [{"name": "Docs: Cloud Credentials", "href": "https://2.6.docs.portworx.com/reference/cli/credentials/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1.13"
+    "imageid": "portworx-kubernetes-running:1.18"
     }
 }
