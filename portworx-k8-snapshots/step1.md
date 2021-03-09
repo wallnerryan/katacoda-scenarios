@@ -2,7 +2,7 @@ Note: All questions are mandatory. Once completed, click on the 'Check Answers' 
 
 
 
->> How many deployments have been created for MYSQL with label `app=mysql` in this cluster (all namespaces)?<< 
+>> How many pods have been created for MYSQL with label `app=mysql` in this cluster (all namespaces)?<< 
 === 1
 
 
