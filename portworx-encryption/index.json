@@ -58,6 +58,6 @@
     "dashboards": [{"name": "Reference: Encryption", "href": "https://2.6.docs.portworx.com/key-management/kubernetes-secrets/pvc-encryption-using-storageclass/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1:18"
+    "imageid": "portworx-kubernetes-running:1.18"
     }
 }
