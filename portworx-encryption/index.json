@@ -45,7 +45,7 @@
       "text": "finish.md"
     },
     "assets": {
-      "host01": [
+      "node01": [
          {"file": "*", "target": "/tmp/", "chmod": "+x"}
       ]
     }
@@ -55,9 +55,9 @@
     "showdashboard": true,
     "hidefinish": false,
     "hideintro": true,
-    "dashboards": [{"name": "Reference: Encryption", "href": "https://2.3.docs.portworx.com/key-management/kubernetes-secrets/pvc-encryption-using-storageclass/"}]
+    "dashboards": [{"name": "Reference: Encryption", "href": "https://2.6.docs.portworx.com/key-management/kubernetes-secrets/pvc-encryption-using-storageclass/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running"
+    "imageid": "portworx-kubernetes-running:1:18"
     }
 }
