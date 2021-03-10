@@ -61,9 +61,9 @@
     "showdashboard": true,
     "hidefinish": false,
     "hideintro": true,
-    "dashboards": [{"name": "Docs: PX Security - Multi-tenancy", "href": "https://2.3.docs.portworx.com/cloud-references/security/kubernetes/shared-secret-model-multitenancy/"}]
+    "dashboards": [{"name": "Docs: PX Security - Multi-tenancy", "href": "https://2.6.docs.portworx.com/cloud-references/security/kubernetes/shared-secret-model-multitenancy/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1.13"
+    "imageid": "portworx-kubernetes-running:1.18"
     }
 }

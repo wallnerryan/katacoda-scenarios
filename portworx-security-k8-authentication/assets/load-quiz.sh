@@ -5,11 +5,7 @@ launch.sh
 
 sh /tmp/create-pxkeys.sh
 
-##Create an etcd container
-#sh /tmp/install-etcd.sh
-
-
-##Install Portworx with CSI
+##Install Portworx with Security
 cp /tmp/px-spec.yaml /root/px-spec.yaml
 
 kubectl delete ds kube-keepalived-vip -n kube-system

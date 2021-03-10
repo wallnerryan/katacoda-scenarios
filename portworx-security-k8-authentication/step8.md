@@ -1,5 +1,5 @@
 </br>
-##### Create a StorageClass called `px-secure-sc` that uses `portworx-volume` provisioner and has the following parameters.
+##### Create a StorageClass called `px-secure-sc` that uses `portworx-volume` provisioner and has the following parameters. These parameters allow CSI to dynamically provision volumes with the namespace or project specific secrets.
 
     csi.storage.k8s.io/provisioner-secret-name: px-k8s-user
     csi.storage.k8s.io/provisioner-secret-namespace: ${pvc.namespace}
