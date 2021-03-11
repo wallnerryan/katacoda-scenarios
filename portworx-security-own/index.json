@@ -54,9 +54,9 @@
     "showdashboard": true,
     "hidefinish": false,
     "hideintro": true,
-    "dashboards": [{"name": "Docs: Ownership", "href": "https://2.3.docs.portworx.com/reference/cli/volume-access/"}]
+    "dashboards": [{"name": "Docs: Ownership", "href": "https://2.6.docs.portworx.com/reference/cli/volume-access/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1.13"
+    "imageid": "portworx-kubernetes-running:1.18"
     }
 }
