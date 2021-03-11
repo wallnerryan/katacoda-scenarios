@@ -54,9 +54,9 @@
     "showdashboard": true,
     "hidefinish": false,
     "hideintro": true,
-    "dashboards": [{"name": "Docs: Auth Tokens", "href": "https://2.3.docs.portworx.com/reference/cli/self-signed-tokens/"}]
+    "dashboards": [{"name": "Docs: Auth Tokens", "href": "https://2.6.docs.portworx.com/reference/cli/self-signed-tokens/"}]
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1.13"
+    "imageid": "portworx-kubernetes-running:1.18"
     }
 }
