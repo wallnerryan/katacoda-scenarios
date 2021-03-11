@@ -32,10 +32,10 @@
       "text": "finish.md"
     },
     "assets": {
-      "host02": [
+      "node01": [
          {"file": "role.json", "target": "/root", "chmod": "+x"},
-	 {"file": "role-update.json", "target": "/tmp", "chmod": "+x"},
-	 {"file": "developer.json", "target": "/tmp", "chmod": "+x"}
+	       {"file": "role-update.json", "target": "/tmp", "chmod": "+x"},
+	       {"file": "developer.json", "target": "/tmp", "chmod": "+x"}
       ]
     }
     },
