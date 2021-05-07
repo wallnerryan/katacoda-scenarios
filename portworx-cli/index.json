@@ -16,7 +16,7 @@
       {
         "title": "PXCTL Version",
         "text": "step1.md",
-	"answer": "step1-answer.md"
+	      "answer": "step1-answer.md"
       },
       {
         "title": "PXCTL Status",
@@ -54,6 +54,6 @@
     "hideintro": true
     },
     "backend": {
-    "imageid": "portworx-kubernetes-running:1.13"
+    "imageid": "portworx-kubernetes-running:1.18"
     }
 }
